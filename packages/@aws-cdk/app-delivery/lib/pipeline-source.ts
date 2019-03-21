@@ -1,15 +1,23 @@
 import s3 = require('@aws-cdk/aws-s3');
 import { Construct, Fn } from '@aws-cdk/cdk';
 
-interface BootstrapPipelineSourceProps {
-  pipeline: string;
+export interface BootstrapPipelineSourceProps {
+  /**
+   * The name of the bootstrap pipeline to monitor as defined in
+   * `cdk.pipelines.yaml`.
+   */
+  bootstrap: string;
 }
 
+/**
+ * An AWS CodePipeline source action that is monitors a CDK bootstrapping
+ * pipeline and triggered when new artifacts are published.
+ */
 export class BootstrapPipelineSource extends s3.PipelineSourceAction {
   public readonly pipelineAttributes: BootstrapPipelineAttributes;
 
   constructor(scope: Construct, id: string, props: BootstrapPipelineSourceProps) {
-    const exportPrefix = `cdk-pipeline:${props.pipeline}`;
+    const exportPrefix = `cdk-pipeline:${props.bootstrap}`;
 
     const attributes: BootstrapPipelineAttributes = {
       bucketName: Fn.importValue(`${exportPrefix}-bucket`),
@@ -29,8 +37,23 @@ export class BootstrapPipelineSource extends s3.PipelineSourceAction {
   }
 }
 
+/**
+ * Attributes of the bootstrap pipeline.
+ */
 export interface BootstrapPipelineAttributes {
+  /**
+   * The bucket name into which the the bootstrap pipeline artifacts are
+   * published.
+   */
   readonly bucketName: string;
+
+  /**
+   * The S3 object key for pipeline artifacts.
+   */
   readonly objectKey: string;
+
+  /**
+   * The semantic version specification of the CDK CLI to use.
+   */
   readonly toolkitVersion: string;
 }

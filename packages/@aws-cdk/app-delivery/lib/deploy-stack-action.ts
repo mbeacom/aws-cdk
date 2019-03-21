@@ -2,7 +2,7 @@ import codebuild = require('@aws-cdk/aws-codebuild');
 import codepipeline_api = require('@aws-cdk/aws-codepipeline-api');
 import iam = require('@aws-cdk/aws-iam');
 import { Construct, Stack } from '@aws-cdk/cdk';
-import { ApplicationPipeline } from './application-pipeline';
+import { DeploymentPipeline } from './application-pipeline';
 
 export interface DeployStackActionProps {
   /**
@@ -43,14 +43,10 @@ export class DeployStackAction extends codepipeline_api.Action {
 
     this.stackName = props.stack.name;
     this.admin = props.admin;
-  }
 
-  public get configuration(): any {
-    return this.buildAction.configuration;
-  }
-
-  public set configuration(_: any) {
-    return;
+    Object.defineProperty(this, 'configuration', {
+      get: () => this.buildAction.configuration
+    });
   }
 
   private get buildAction() {
@@ -70,7 +66,7 @@ export class DeployStackAction extends codepipeline_api.Action {
   }
 
   public bind(stage: codepipeline_api.IStage, scope: Construct) {
-    if (!ApplicationPipeline.isApplicationPipeline(stage.pipeline)) {
+    if (!DeploymentPipeline.isApplicationPipeline(stage.pipeline)) {
       throw new Error(`DeployStackAction must be added to an ApplicationPipeline`);
     }
 
