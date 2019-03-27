@@ -1,14 +1,20 @@
 import codebuild = require('@aws-cdk/aws-codebuild');
 import codepipeline_api = require('@aws-cdk/aws-codepipeline-api');
 import iam = require('@aws-cdk/aws-iam');
-import { Construct, Stack } from '@aws-cdk/cdk';
-import { DeploymentPipeline } from './application-pipeline';
+import { Construct } from '@aws-cdk/cdk';
 
-export interface DeployStackActionProps {
+export interface DeployActionProps {
   /**
-   * The stack to deploy
+   * Names of all the stacks to deploy.
+   * @default - deploys all stacks in the assembly that are not marked "autoDeploy: false"
    */
-  stack: Stack;
+  readonly stacks?: string[];
+
+  /**
+   * Indicates if only these stacks should be deployed or also any dependencies.
+   * @default false deploys all stacks and their dependencies in topological order.
+   */
+  readonly exclusively?: boolean;
 
   /**
    * Grant administrator permissions to the deployment action. This is likely to
@@ -18,7 +24,18 @@ export interface DeployStackActionProps {
    * `addToRolePolicy` or by using a grant method on a resource and referencing
    * the `project.role`.
    */
-  admin: boolean;
+  readonly admin: boolean;
+
+  /**
+   * Toolchain version to use.
+   * @default - lastest
+   */
+  readonly version?: string;
+
+  /**
+   * A CodePipeline artifact that contains the cloud assembly to deploy.
+   */
+  readonly assembly: codepipeline_api.Artifact;
 }
 
 /**
@@ -27,22 +44,30 @@ export interface DeployStackActionProps {
  * This action can only be added to an `ApplicationPipeline` which is bound to a
  * bootstrap pipeline source.
  */
-export class DeployStackAction extends codepipeline_api.Action {
-  private readonly stackName: string;
+export class DeployAction extends codepipeline_api.Action {
+  private readonly stacks: string;
   private _buildAction?: codebuild.PipelineBuildAction;
   private _project?: codebuild.Project;
   private readonly admin: boolean;
+  private readonly toolchainVersion: string;
+  private readonly assembly: codepipeline_api.Artifact;
+  private readonly exclusively: boolean;
 
-  constructor(props: DeployStackActionProps) {
+  constructor(props: DeployActionProps) {
+    const stacks = props.stacks ? props.stacks.join(' ') : '';
+
     super({
       category: codepipeline_api.ActionCategory.Build,
       provider: 'CodeBuild',
       artifactBounds: { minInputs: 1, maxInputs: 1, minOutputs: 0, maxOutputs: 0 },
-      actionName: props.stack.name,
+      actionName: (props.stacks || [ 'all' ]).join('-'),
     });
 
-    this.stackName = props.stack.name;
+    this.stacks = stacks;
     this.admin = props.admin;
+    this.toolchainVersion = props.version || 'latest';
+    this.assembly = props.assembly;
+    this.exclusively = props.exclusively === undefined ? false : true;
 
     Object.defineProperty(this, 'configuration', {
       get: () => this.buildAction.configuration
@@ -66,19 +91,8 @@ export class DeployStackAction extends codepipeline_api.Action {
   }
 
   public bind(stage: codepipeline_api.IStage, scope: Construct) {
-    if (!DeploymentPipeline.isApplicationPipeline(stage.pipeline)) {
-      throw new Error(`DeployStackAction must be added to an ApplicationPipeline`);
-    }
-
-    const source = stage.pipeline.source;
-    if (!source) {
-      throw new Error(`Cannot find source of ApplicationPipeline`);
-    }
-
-    const version = source.pipelineAttributes.toolkitVersion;
-    const stackName = this.stackName;
-
-    const project = new codebuild.PipelineProject(scope, `${stackName}Deployment`, {
+    const exclusively = this.exclusively ? '--exclusively' : '';
+    const project = new codebuild.PipelineProject(scope, `DeployStackProject`, {
       environment: {
         buildImage: codebuild.LinuxBuildImage.UBUNTU_14_04_NODEJS_10_1_0,
       },
@@ -92,20 +106,20 @@ export class DeployStackAction extends codepipeline_api.Action {
           },
           build: {
             commands: [
-              `npx --package aws-cdk@${version} -- cdk deploy --require-approval=never ${stackName}`
+              `npx --package aws-cdk@${this.toolchainVersion} -- cdk deploy ${exclusively} --require-approval=never ${this.stacks}`
             ]
           }
         }
       }
     });
 
-    this.addInputArtifact(source.outputArtifact);
+    this.addInputArtifact(this.assembly);
 
     this._project = project;
 
     this._buildAction = new codebuild.PipelineBuildAction({
-      actionName: this.stackName,
-      inputArtifact: source.outputArtifact,
+      actionName: this.actionName,
+      inputArtifact: this.assembly,
       project,
     });
 

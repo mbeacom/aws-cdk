@@ -1,7 +1,8 @@
+import codepipeline_api = require('@aws-cdk/aws-codepipeline-api');
 import s3 = require('@aws-cdk/aws-s3');
 import { Construct, Fn } from '@aws-cdk/cdk';
 
-export interface BootstrapPipelineSourceProps {
+export interface SourceActionProps {
   /**
    * The name of the bootstrap pipeline to monitor as defined in
    * `cdk.pipelines.yaml`.
@@ -10,19 +11,17 @@ export interface BootstrapPipelineSourceProps {
 }
 
 /**
- * An AWS CodePipeline source action that is monitors a CDK bootstrapping
- * pipeline and triggered when new artifacts are published.
+ * An AWS CodePipeline source action that is monitors the output of a boostrap pipeline
+ * and triggers the pipeline when a new cloud assembly is available for deployment.
  */
-export class BootstrapPipelineSource extends s3.PipelineSourceAction {
-  public readonly pipelineAttributes: BootstrapPipelineAttributes;
-
-  constructor(scope: Construct, id: string, props: BootstrapPipelineSourceProps) {
+export class SourceAction extends s3.PipelineSourceAction {
+  constructor(scope: Construct, id: string, props: SourceActionProps) {
     const exportPrefix = `cdk-pipeline:${props.bootstrap}`;
 
     const attributes: BootstrapPipelineAttributes = {
       bucketName: Fn.importValue(`${exportPrefix}-bucket`),
       objectKey: Fn.importValue(`${exportPrefix}-object-key`),
-      toolkitVersion: Fn.importValue(`${exportPrefix}-toolkit-version`),
+      toolchainVersion: Fn.importValue(`${exportPrefix}-toolchain-version`),
     };
 
     const bucket = s3.Bucket.import(scope, `${id}/Bucket`, { bucketName: attributes.bucketName });
@@ -32,15 +31,17 @@ export class BootstrapPipelineSource extends s3.PipelineSourceAction {
       bucketKey: attributes.objectKey,
       outputArtifactName: 'CloudAssembly'
     });
+  }
 
-    this.pipelineAttributes = attributes;
+  public get assembly(): codepipeline_api.Artifact {
+    return this.outputArtifact;
   }
 }
 
 /**
  * Attributes of the bootstrap pipeline.
  */
-export interface BootstrapPipelineAttributes {
+interface BootstrapPipelineAttributes {
   /**
    * The bucket name into which the the bootstrap pipeline artifacts are
    * published.
@@ -55,5 +56,5 @@ export interface BootstrapPipelineAttributes {
   /**
    * The semantic version specification of the CDK CLI to use.
    */
-  readonly toolkitVersion: string;
+  readonly toolchainVersion: string;
 }

@@ -1,62 +1,77 @@
 import codebuild = require('@aws-cdk/aws-codebuild');
 import codepipeline = require('@aws-cdk/aws-codepipeline');
-import iam = require('@aws-cdk/aws-iam');
 import s3 = require('@aws-cdk/aws-s3');
 import secretsmanager = require('@aws-cdk/aws-secretsmanager');
-import cdk = require('@aws-cdk/cdk');
+import { CfnOutput, Construct, Secret } from '@aws-cdk/cdk';
+import { BuildAction } from '../lib/build';
+import { DeployAction } from '../lib/deploy';
 
-export interface BootstrapPipelineProps {
+export interface PipelineProps {
   /**
    * Github oauth secrets manager ARN.
    */
-  oauthSecret: string;
+  readonly oauthSecret: string;
 
   /**
    * The GitHub https URL.
    */
-  source: string;
+  readonly source: string;
 
   /**
    * @default - default branch
    */
-  branch?: string;
+  readonly branch?: string;
 
   /**
    * Working directory to run build command.
    * @default - root directory of your repository
    */
-  workdir?: string;
+  readonly workdir?: string;
+
+  /**
+   * Names of all the stacks to deploy.
+   * @default - deploys all stacks in the assembly that are not marked "autoDeploy: false"
+   */
+  readonly stacks?: string[];
 
   /**
    * CodeBuild environment to use.
    */
-  environment?: codebuild.BuildEnvironment;
+  readonly environment?: codebuild.BuildEnvironment;
 
   /**
    * @default "npm ci"
    */
-  install?: string;
+  readonly install?: string;
 
   /**
    * @default "npm run build && npm test"
    */
-  build?: string;
+  readonly build?: string;
 
   /**
-   * Version of the CDK Toolkit to use.
-   * @default - uses latest version
+   * Indicates if only these stacks should be deployed or also any dependencies.
+   * @default false deploys all stacks and their dependencies in topological order.
    */
-  version?: string;
+  readonly exclusively?: boolean;
 
   /**
-   * Stack names to deploy
-   * @default - deploy all stacks don't have `autoDeploy: false`
+   * Grant administrator privilages on your account to the build & deploy
+   * CodeBuild project.
+   *
+   * @default true
    */
-  stacks?: string[];
+  readonly admin?: boolean;
+
+  /**
+   * CDK toolchain version.
+   * @default - latest
+   */
+  readonly version?: string;
 }
 
-export class BootstrapPipeline extends cdk.Construct {
-  constructor(scope: cdk.Stack, id: string, props: BootstrapPipelineProps) {
+export class Pipeline extends Construct {
+  constructor(scope: Construct, id: string, props: PipelineProps) {
     super(scope, id);
 
     const sourcePrefix = 'https://github.com/';
@@ -70,62 +85,26 @@ export class BootstrapPipeline extends cdk.Construct {
       secretId: props.oauthSecret
     });
 
-    const workdir = props.workdir || '.';
-    const install = props.install || 'npx npm@latest ci';
-    const build   = props.build   || 'npm run build';
     const version = props.version || 'latest';
-    const stacks  = props.stacks  || [];
     const branch  = props.branch;
 
     const sourceAction = new codepipeline.GitHubSourceAction({
       actionName: 'Pull',
       owner,
       repo,
-      oauthToken: new cdk.Secret(oauth.stringValue),
+      oauthToken: new Secret(oauth.stringValue),
       outputArtifactName: 'Source',
       branch
     });
 
-    const environment = props.environment || {
-      buildImage: codebuild.LinuxBuildImage.UBUNTU_14_04_NODEJS_10_1_0,
-    };
-
-    const buildSpec = {
-      version: '0.2',
-      phases: {
-        install: {
-          commands: [
-            `cd ${workdir}`,
-            install,
-          ]
-        },
-        build: {
-          commands: [
-            build,
-            `npx --package aws-cdk@${version} -- cdk deploy ${stacks.join(' ')} --require-approval=never`
-          ]
-        }
-      },
-      artifacts: {
-        'files': [ '**/*' ],
-        'base-directory': workdir
-      }
-    };
-
-    const buildProject = new codebuild.PipelineProject(this, 'Build', {
-      environment,
-      buildSpec
-    });
-
-    buildProject.addToRolePolicy(new iam.PolicyStatement()
-      .addAllResources()
-      .addAction('*'));
-
-    const buildAction = new codebuild.PipelineBuildAction({
-      inputArtifact: sourceAction.outputArtifact,
-      project: buildProject,
-      actionName: 'Build',
-    });
+    const buildAction = new BuildAction(this, 'BuildDeploy', {
+      sourceArtifact: sourceAction.outputArtifact,
+      workdir: props.workdir,
+      build: props.build,
+      environment: props.environment,
+      install: props.install,
+      version: props.version
+    }).action;
 
     const publishBucket = new s3.Bucket(this, 'Publish', {
       versioned: true
@@ -141,30 +120,39 @@ export class BootstrapPipeline extends cdk.Construct {
       extract: false
     });
 
+    const deployAction = new DeployAction({
+      admin: true,
+      assembly: buildAction.outputArtifact,
+      stacks: props.stacks,
+      version: props.version,
+      exclusively: props.exclusively
+    });
+
     new codepipeline.Pipeline(this, 'Bootstrap', {
       restartExecutionOnUpdate: true,
       stages: [
         { name: 'Source',  actions: [ sourceAction  ] },
         { name: 'Build',   actions: [ buildAction   ] },
+        { name: 'Deploy',  actions: [ deployAction  ] },
         { name: 'Publish', actions: [ publishAction ] }
       ]
     });
 
     const exportPrefix = `cdk-pipeline:${id}`;
 
-    new cdk.CfnOutput(this, 'PublishBucketName', {
+    new CfnOutput(this, 'PublishBucketName', {
       value: publishBucket.bucketName,
       export: `${exportPrefix}-bucket`
     });
 
-    new cdk.CfnOutput(this, 'PublishObjectKey', {
+    new CfnOutput(this, 'PublishObjectKey', {
       value: objectKey,
       export: `${exportPrefix}-object-key`
     });
 
-    new cdk.CfnOutput(this, 'ToolkitVersion', {
+    new CfnOutput(this, 'ToolchainVersion', {
       value: version,
-      export: `${exportPrefix}-toolkit-version`
+      export: `${exportPrefix}-toolchain-version`
     });
   }
 }
