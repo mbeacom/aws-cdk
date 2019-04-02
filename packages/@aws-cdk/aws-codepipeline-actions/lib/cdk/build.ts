@@ -1,5 +1,5 @@
 import codebuild = require('@aws-cdk/aws-codebuild');
-import codepipeline_api = require('@aws-cdk/aws-codepipeline-api');
+import codepipeline = require('@aws-cdk/aws-codepipeline');
 import { Construct } from '@aws-cdk/cdk';
 
 export interface BuildActionProps {
@@ -33,7 +33,7 @@ export interface BuildActionProps {
   /**
    * The source artifact to build from.
    */
-  sourceArtifact: codepipeline_api.Artifact;
+  sourceArtifact: codepipeline.Artifact;
 }
 
 export class BuildAction extends Construct {
