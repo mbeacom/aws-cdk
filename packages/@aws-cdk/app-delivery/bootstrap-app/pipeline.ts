@@ -1,12 +1,10 @@
 import codebuild = require('@aws-cdk/aws-codebuild');
 import codepipeline = require('@aws-cdk/aws-codepipeline');
+import actions = require('@aws-cdk/aws-codepipeline-actions');
 import s3 = require('@aws-cdk/aws-s3');
-import secretsmanager = require('@aws-cdk/aws-secretsmanager');
-import { CfnOutput, Construct, Secret } from '@aws-cdk/cdk';
-import { BuildAction } from '../lib/build';
-import { DeployAction } from '../lib/deploy';
+import { Construct, SecretValue } from '@aws-cdk/cdk';
 
-export interface PipelineProps {
+export interface BootstrapPipelineProps {
   /**
    * Github oauth secrets manager ARN.
    */
@@ -70,8 +68,8 @@ export interface PipelineProps {
   readonly version?: string;
 }
 
-export class Pipeline extends Construct {
-  constructor(scope: Construct, id: string, props: PipelineProps) {
+export class BootstrapPipeline extends Construct {
+  constructor(scope: Construct, id: string, props: BootstrapPipelineProps) {
     super(scope, id);
 
     const sourcePrefix = 'https://github.com/';
@@ -81,51 +79,43 @@ export class Pipeline extends Construct {
     const source = props.source.substr(sourcePrefix.length);
     const [ owner, repo ] = source.split('/');
 
-    const oauth = new secretsmanager.SecretString(this, 'OauthTokenSecret', {
-      secretId: props.oauthSecret
-    });
-
-    const version = props.version || 'latest';
     const branch  = props.branch;
+    const publishBucket = new s3.Bucket(this, 'Publish', { versioned: true });
+    const objectKey = 'cloud-assembly.zip';
 
-    const sourceAction = new codepipeline.GitHubSourceAction({
+    const sourceAction = new actions.GitHubSourceAction({
       actionName: 'Pull',
       owner,
       repo,
-      oauthToken: new Secret(oauth.stringValue),
+      oauthToken: SecretValue.secretsManager(props.oauthSecret),
       outputArtifactName: 'Source',
       branch
     });
 
-    const buildAction = new BuildAction(this, 'BuildDeploy', {
+    const buildAction = new actions.CdkBuildAction(this, 'Build', {
       sourceArtifact: sourceAction.outputArtifact,
       workdir: props.workdir,
       build: props.build,
       environment: props.environment,
       install: props.install,
       version: props.version
-    }).action;
-
-    const publishBucket = new s3.Bucket(this, 'Publish', {
-      versioned: true
     });
 
-    const objectKey = 'cloud-assembly.zip';
+    const deployAction = new actions.CdkDeployAction(this, 'Deploy', {
+      admin: true,
+      assembly: buildAction.assembly,
+      environment: props.environment,
+      stacks: props.stacks,
+      version: props.version,
+      exclusively: props.exclusively
+    });
 
-    const publishAction = new s3.PipelineDeployAction({
-      inputArtifact: buildAction.outputArtifact,
+    const publishAction = new actions.S3DeployAction({
+      inputArtifact: buildAction.assembly,
       actionName: 'Publish',
       bucket: publishBucket,
       objectKey,
       extract: false
-    });
-
-    const deployAction = new DeployAction({
-      admin: true,
-      assembly: buildAction.outputArtifact,
-      stacks: props.stacks,
-      version: props.version,
-      exclusively: props.exclusively
     });
 
     new codepipeline.Pipeline(this, 'Bootstrap', {
@@ -138,21 +128,10 @@ export class Pipeline extends Construct {
       ]
     });
 
-    const exportPrefix = `cdk-pipeline:${id}`;
-
-    new CfnOutput(this, 'PublishBucketName', {
-      value: publishBucket.bucketName,
-      export: `${exportPrefix}-bucket`
-    });
-
-    new CfnOutput(this, 'PublishObjectKey', {
-      value: objectKey,
-      export: `${exportPrefix}-object-key`
-    });
-
-    new CfnOutput(this, 'ToolchainVersion', {
-      value: version,
-      export: `${exportPrefix}-toolchain-version`
+    actions.CdkSourceAction.exportArtifacts(this, {
+      boostrapId: id,
+      bucketName: publishBucket.bucketName,
+      objectKey
     });
   }
 }
