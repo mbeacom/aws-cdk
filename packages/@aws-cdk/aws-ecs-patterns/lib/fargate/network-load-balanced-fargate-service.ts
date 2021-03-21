@@ -154,6 +154,7 @@ export class NetworkLoadBalancedFargateService extends NetworkLoadBalancedServic
       maxHealthyPercent: props.maxHealthyPercent,
       propagateTags: props.propagateTags,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
       cloudMapOptions: props.cloudMapOptions,
       platformVersion: props.platformVersion,
       deploymentController: props.deploymentController,

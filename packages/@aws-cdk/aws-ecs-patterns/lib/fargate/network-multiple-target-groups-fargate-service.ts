@@ -180,6 +180,7 @@ export class NetworkMultipleTargetGroupsFargateService extends NetworkMultipleTa
       healthCheckGracePeriod: props.healthCheckGracePeriod,
       propagateTags: props.propagateTags,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
       cloudMapOptions: props.cloudMapOptions,
       platformVersion: props.platformVersion,
     });

@@ -148,6 +148,7 @@ export class ApplicationMultipleTargetGroupsEc2Service extends ApplicationMultip
       healthCheckGracePeriod: props.healthCheckGracePeriod,
       propagateTags: props.propagateTags,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
       cloudMapOptions: props.cloudMapOptions,
     });
   }

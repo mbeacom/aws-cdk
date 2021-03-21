@@ -131,6 +131,7 @@ export class ApplicationLoadBalancedEc2Service extends ApplicationLoadBalancedSe
       maxHealthyPercent: props.maxHealthyPercent,
       propagateTags: props.propagateTags,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
       cloudMapOptions: props.cloudMapOptions,
       deploymentController: props.deploymentController,
       circuitBreaker: props.circuitBreaker,

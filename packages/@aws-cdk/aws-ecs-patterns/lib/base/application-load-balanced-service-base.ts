@@ -200,6 +200,14 @@ export interface ApplicationLoadBalancedServiceBaseProps {
   readonly enableECSManagedTags?: boolean;
 
   /**
+   * Whether or not the execute command functionality is enabled for the service. If true, the execute command
+   * functionality is enabled for all containers in tasks as part of the service.
+   *
+   * @default false
+   */
+  readonly enableExecuteCommand?: boolean;
+
+  /**
    * The options for configuring an Amazon ECS service to use service discovery.
    *
    * @default - AWS Cloud Map service discovery is not enabled.

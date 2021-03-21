@@ -143,6 +143,7 @@ export class QueueProcessingFargateService extends QueueProcessingServiceBase {
       maxHealthyPercent: props.maxHealthyPercent,
       propagateTags: props.propagateTags,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
       platformVersion: props.platformVersion,
       deploymentController: props.deploymentController,
       securityGroups: props.securityGroups,

@@ -180,6 +180,7 @@ export class ApplicationMultipleTargetGroupsFargateService extends ApplicationMu
       healthCheckGracePeriod: props.healthCheckGracePeriod,
       propagateTags: props.propagateTags,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
       cloudMapOptions: props.cloudMapOptions,
       platformVersion: props.platformVersion,
     });

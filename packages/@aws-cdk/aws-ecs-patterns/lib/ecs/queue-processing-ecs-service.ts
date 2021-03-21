@@ -113,6 +113,7 @@ export class QueueProcessingEc2Service extends QueueProcessingServiceBase {
       maxHealthyPercent: props.maxHealthyPercent,
       propagateTags: props.propagateTags,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
       deploymentController: props.deploymentController,
       circuitBreaker: props.circuitBreaker,
     });

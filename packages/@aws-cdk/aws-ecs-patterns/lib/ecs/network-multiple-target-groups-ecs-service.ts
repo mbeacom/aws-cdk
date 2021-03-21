@@ -148,6 +148,7 @@ export class NetworkMultipleTargetGroupsEc2Service extends NetworkMultipleTarget
       healthCheckGracePeriod: props.healthCheckGracePeriod,
       propagateTags: props.propagateTags,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
       cloudMapOptions: props.cloudMapOptions,
     });
   }

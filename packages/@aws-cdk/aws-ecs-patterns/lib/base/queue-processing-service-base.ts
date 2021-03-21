@@ -161,6 +161,14 @@ export interface QueueProcessingServiceBaseProps {
   readonly enableECSManagedTags?: boolean;
 
   /**
+   * Whether or not the execute command functionality is enabled for the service. If true, the execute command
+   * functionality is enabled for all containers in tasks as part of the service.
+   *
+   * @default false
+   */
+  readonly enableExecuteCommand?: boolean;
+
+  /**
    * The name of a family that the task definition is registered to. A family groups multiple versions of a task definition.
    *
    * @default - Automatically generated name.
