@@ -168,6 +168,14 @@ export interface BaseServiceOptions {
   readonly enableECSManagedTags?: boolean;
 
   /**
+   * Whether or not the execute command functionality is enabled for the service. If true, the execute command
+   * functionality is enabled for all containers in tasks as part of the service.
+   *
+   * @default false
+   */
+  readonly enableExecuteCommand?: boolean;
+
+  /**
    * Specifies which deployment controller to use for the service. For more information, see
    * [Amazon ECS Deployment Types](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-types.html)
    *
@@ -387,6 +395,7 @@ export abstract class BaseService extends Resource
       },
       propagateTags: props.propagateTags === PropagatedTagSource.NONE ? undefined : props.propagateTags,
       enableEcsManagedTags: props.enableECSManagedTags ?? false,
+      enableExecuteCommand: props.enableExecuteCommand ?? false,
       deploymentController: props.circuitBreaker ? {
         type: DeploymentControllerType.ECS,
       } : props.deploymentController,

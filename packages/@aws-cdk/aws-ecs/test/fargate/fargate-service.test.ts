@@ -42,6 +42,7 @@ nodeunitShim({
         },
         LaunchType: LaunchType.FARGATE,
         EnableECSManagedTags: false,
+        EnableExecuteCommand: false,
         NetworkConfiguration: {
           AwsvpcConfiguration: {
             AssignPublicIp: 'DISABLED',
@@ -169,6 +170,7 @@ nodeunitShim({
           },
         ],
         EnableECSManagedTags: false,
+        EnableExecuteCommand: false,
         NetworkConfiguration: {
           AwsvpcConfiguration: {
             AssignPublicIp: 'DISABLED',
@@ -544,6 +546,7 @@ nodeunitShim({
           Type: 'EXTERNAL',
         },
         EnableECSManagedTags: false,
+        EnableExecuteCommand: false,
         NetworkConfiguration: {
           AwsvpcConfiguration: {
             AssignPublicIp: 'DISABLED',
@@ -755,6 +758,7 @@ nodeunitShim({
         },
         LaunchType: LaunchType.FARGATE,
         EnableECSManagedTags: false,
+        EnableExecuteCommand: false,
         NetworkConfiguration: {
           AwsvpcConfiguration: {
             AssignPublicIp: 'DISABLED',

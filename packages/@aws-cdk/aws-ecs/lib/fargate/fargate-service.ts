@@ -157,6 +157,7 @@ export class FargateService extends BaseService implements IFargateService {
       capacityProviderStrategies: props.capacityProviderStrategies,
       propagateTags: propagateTagsFromSource,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
     }, {
       cluster: props.cluster.clusterName,
       taskDefinition: props.deploymentController?.type === DeploymentControllerType.EXTERNAL ? undefined : props.taskDefinition.taskDefinitionArn,

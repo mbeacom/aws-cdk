@@ -191,6 +191,7 @@ export class Ec2Service extends BaseService implements IEc2Service {
       launchType: LaunchType.EC2,
       propagateTags: propagateTagsFromSource,
       enableECSManagedTags: props.enableECSManagedTags,
+      enableExecuteCommand: props.enableExecuteCommand,
     },
     {
       cluster: props.cluster.clusterName,

@@ -44,6 +44,7 @@ nodeunitShim({
         LaunchType: LaunchType.EC2,
         SchedulingStrategy: 'REPLICA',
         EnableECSManagedTags: false,
+        EnableExecuteCommand: false,
       }));
 
       test.done();
@@ -453,6 +454,7 @@ nodeunitShim({
         },
         SchedulingStrategy: 'REPLICA',
         EnableECSManagedTags: false,
+        EnableExecuteCommand: false,
       }));
 
       test.done();
